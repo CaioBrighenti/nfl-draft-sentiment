@@ -6,28 +6,31 @@ This is a WIP project to stream comments from the [/r/NFL subreddit](http://www.
 
 ### Python data stream
 
-The Python component of this project pulls new comments from /r/NFL in realtime using the [Python Reddit API Wrapper](https://praw.readthedocs.io/en/latest/) and automatically writes them into the ```data/comments.csv``` file. This file will also leverage the Python [Natural Language Toolkit](https://www.nltk.org/) package to calculate positive and negative sentiment for each comment, and record these in the .csv file.
+The Python component of this project pulls new comments from /r/NFL in realtime using the [Python Reddit API Wrapper](https://praw.readthedocs.io/en/latest/) and automatically writes them into the ```data/comments.csv``` file. When a new comment is obtained, the script calls the [Stanford CoreNLP](https://stanfordnlp.github.io/CoreNLP/sentiment.html) sentiment annotator, which classifies the sentiment of the comment on a 0-4 scale. 0 represents highly negative, 2 neutral, and 4 highly positive. The script then records the timestamp, author flair (team), comment text, length, and sentiment.
+
 
 ### RShiny application
 
-The RShiny component of this project relies on the ```reactiveFileReader()``` function to automatically read the comment data as the Python script updates it. Currently, this application does a simple visualization showing histograms of comment body lengths faceted by team as a proof of concept. The complete code for the RShiny application is available in ```shiny/app.R```.
+The RShiny component of this project relies on the ```reactiveFileReader()``` function to automatically read the comment data as the Python script updates it. Every 5 seconds, the data is reloaded and the Shiny server computes a rolling average of sentiment by team over the previous 30 seconds. This average is recorded in a table and visualized in two forms: a bar plot of current estimates by team, and a line chart showing the rolling average over time for each team. I intend to consider other metrics, such as proportion of of positive/negative comments as opposed to the sentiment metric outputted by CoreNLP.
 
-In the future, the RShiny application will use the positive and negative sentiment values to compute a rolling average of sentiment for each team, and display these in faceted bar plots.
+Given that the application only uses data from the last 30 seconds, there is no need to build up the dataset indefinitely, eventually causing slow downs due to the dataset size. To address this, I intend to build in a system that overwrites the accumulating .csv to remove unecessary application, while maintaining a complete copy elsewhere.
 
 ## To-Do
 
 * Improve text processing, i.e. remove special characters and punctuation
 * Remove commments from users with bandwagon flairs or NFC/AFC/NFL/None flairs
-* Implement sentiment analysis in Python script
-* Implement rolling average sentiment by team in RShiny
-* Implement bar plots showing fanbase sentiment in RShiny
+* ~~Implement sentiment analysis in Python script
+* ~~Implement rolling average sentiment by team in RShiny
+* ~~Implement bar plots showing fanbase sentiment in RShiny
 * Test application on large-scale dataset
+* Implement data cleanup to avoid indefinite accumulation
+* Implement other metrics
 
 ## Built With
 
 * [RShiny](https://shiny.rstudio.com/)
 * [PRAW](https://praw.readthedocs.io/en/latest/)
-* [NLTK](https://www.nltk.org/)
+* [CoreNLP](https://stanfordnlp.github.io/CoreNLP/)
 
 
 ## Authors
