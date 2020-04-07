@@ -14,6 +14,15 @@ The RShiny component of this project relies on the ```reactiveFileReader()``` fu
 
 In the future, the RShiny application will use the positive and negative sentiment values to compute a rolling average of sentiment for each team, and display these in faceted bar plots.
 
+## To-Do
+
+* Improve text processing, i.e. remove special characters and punctuation
+* Remove commments from users with bandwagon flairs or NFC/AFC/NFL/None flairs
+* Implement sentiment analysis in Python script
+* Implement rolling average sentiment by team in RShiny
+* Implement bar plots showing fanbase sentiment in RShiny
+* Test application on large-scale dataset
+
 ## Built With
 
 * [RShiny](https://shiny.rstudio.com/)
