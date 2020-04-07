@@ -1,6 +1,6 @@
 # NFL Draft Sentiment
 
-This is a WIP project to stream comments from the (/r/NFL subreddit)[http://www.reddit.com/r/NFL] and perform real-time sentiment analysis to gauge fan reactions during the 2020 NFL draft.
+This is a WIP project to stream comments from the [/r/NFL subreddit](http://www.reddit.com/r/NFL) and perform real-time sentiment analysis to gauge fan reactions during the 2020 NFL draft.
 
 ## Components
 
@@ -34,3 +34,6 @@ In the future, the RShiny application will use the positive and negative sentime
 
 * **Caio Brighenti** - [CaioBrighenti2](https://twitter.com/CaioBrighenti2)
 
+## Updates
+
+On the day of the 2020 NFL Draft, I'll be streaming this RShiny application keeping track of fanbase sentiment throughout the draft on [my Twitter](https://twitter.com/CaioBrighenti2). I'll also likely Tweet out periodic updates, so that's the best place to keep track of this project. 
