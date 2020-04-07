@@ -13,7 +13,7 @@ The Python component of this project pulls new comments from /r/NFL in realtime 
 
 The RShiny component of this project relies on the ```reactiveFileReader()``` function to automatically read the comment data as the Python script updates it. Every 5 seconds, the data is reloaded and the Shiny server computes a rolling average of sentiment by team over the previous 30 seconds. This average is recorded in a table and visualized in two forms: a bar plot of current estimates by team, and a line chart showing the rolling average over time for each team. I intend to consider other metrics, such as proportion of of positive/negative comments as opposed to the sentiment metric outputted by CoreNLP.
 
-![screenshot](https://github.com/CaioBrighenti/nfl-draft-sentiment/EVBQDbgWoAA5T8y.png?raw=true)
+![screenshot](https://raw.githubusercontent.com/CaioBrighenti/nfl-draft-sentiment/master/EVBQDbgWoAA5T8y.png)
 
 Given that the application only uses data from the last 30 seconds, there is no need to build up the dataset indefinitely, eventually causing slow downs due to the dataset size. To address this, I intend to build in a system that overwrites the accumulating .csv to remove unecessary application, while maintaining a complete copy elsewhere.
 
