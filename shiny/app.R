@@ -1,5 +1,9 @@
 library(shiny)
 library(tidyverse)
+library(teamcolors)
+
+### GLOBAL VARIABLES
+nfl_colors <- teamcolors %>% filter(league == "nfl") %>% dplyr::select(mascot,primary)
 
 
 ui <- fluidPage(
@@ -14,26 +18,35 @@ ui <- fluidPage(
 
     fluidRow(
         column(12,
-               plotOutput("sentPlot")
+               plotOutput("sentPlot"),
+               verbatimTextOutput("fileReaderText")
         )
     )
 )
 
 
 
-# Define server logic required to draw a histogram
 server <- function(input, output, session) {
 
     output$sentPlot <- renderPlot({
         
-        # generate bins based on input$bins from ui.R
-        comment_data <- as_tibble(fileReaderData())
-        x    <- comment_data$length
+        # load in reactive data
+        comment_data <- as_tibble(fileReaderData()) %>%
+            group_by(team) %>%
+            summarise(length = mean(length))
         
-        # draw the histogram with the specified number of bins
-        p <- ggplot(comment_data, aes(x=length)) +
-            geom_histogram(binwidth = 10) +
-            facet_wrap(~team, scales = "free")
+        
+        
+        # create plot
+        p <- ggplot(comment_data, aes(x=length,y=team)) +
+            geom_col(aes(fill = team)) +
+            theme_minimal() +
+            labs(
+                title = "Average /r/NFL comment length by fanbase",
+                caption = "@CaioBrighenti2",
+                x = "mean comment length",
+                y = ""
+            )
         
         print(p)
     })
@@ -41,10 +54,10 @@ server <- function(input, output, session) {
     fileReaderData <- reactiveFileReader(1500, session,
                                          "D:/repositories/nfl-draft-sentiment/data/comments.csv", read.csv, sep="\t", stringsAsFactors = FALSE)
     
-    # output$fileReaderText <- renderText({
-    #     dat <- as_tibble(fileReaderData())
-    #     print(dat[nrow(dat),]$body)
-    # })
+    output$fileReaderText <- renderText({
+        dat <- as_tibble(fileReaderData())
+        paste("number of observations:", nrow(dat))
+    })
     
 }
 
