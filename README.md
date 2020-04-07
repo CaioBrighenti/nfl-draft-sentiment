@@ -6,7 +6,7 @@ This is a WIP project to stream comments from the (/r/NFL subreddit)[http://www.
 
 ### Python data stream
 
-
+The Python component of this project pulls new comments from /r/NFL in realtime using the (Python Reddit API Wrapper)[https://praw.readthedocs.io/en/latest/] and automatically writes them into the ```data/comments.csv``` file. This file will also implement the sentiment analysis component of the project using the Python [Natural Language Toolkit](https://www.nltk.org/) package.
 
 ### RShiny application
 
