@@ -19,7 +19,6 @@ Given that the application only uses data from the last 30 seconds, there is no 
 
 ## To-Do
 
-* Improve text processing, i.e. remove special characters and punctuation
 * Remove commments from users with bandwagon flairs or NFC/AFC/NFL/None flairs
 * ~~Implement sentiment analysis in Python script~~
 * ~~Implement rolling average sentiment by team in RShiny~~
@@ -27,6 +26,8 @@ Given that the application only uses data from the last 30 seconds, there is no 
 * Test application on large-scale dataset
 * Implement data cleanup to avoid indefinite accumulation
 * Implement other metrics
+* Add sidebar with last 15 comments
+* Add boo/cheer gauge plot for team currently picking
 
 ## Built With
 
