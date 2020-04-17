@@ -2,12 +2,18 @@ import praw
 import csv
 import time
 import re
+import Levenshtein
 from pycorenlp.corenlp import StanfordCoreNLP
+from profanity_filter import ProfanityFilter
+
 
 ## INIT REDDIT INSTANCE
-reddit = praw.Reddit(client_id='',
-                     client_secret='',
-                     user_agent='')
+reddit = praw.Reddit()
+
+## INIT PROFANITY FILTER
+pf = ProfanityFilter()
+pf.censor_whole_words = False
+pf.censor("fuckfuck")
 
 ## coreNLP sent. analysis
 def getSentiment(text):
@@ -61,8 +67,12 @@ for comment in reddit.subreddit('nfl').stream.comments():
     except:
         print("ERROR: CORENLP FAILED")
 
-    # visualize and write
+     # visualize and write
     print([comment_time, comment.author_flair_text, comment_text, comment_length, comment_sent])
+
+    # filter out profanity
+    comment_text = pf.censor(comment_text)
+
     try:
         with open('D:/repositories/nfl-draft-sentiment/data/comments.csv', 'a', newline='') as csvfile:
             # initiate csv writer
