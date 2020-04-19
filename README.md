@@ -26,7 +26,7 @@ During the draft on April 23rd-25th, I will be livestreaming the application at 
 
 ## To-Do
 
-* Remove commments from users with bandwagon flairs or NFC/AFC/NFL/None flairs
+* ~~Remove commments from users with bandwagon flairs or NFC/AFC/NFL/None flairs
 * ~~Implement sentiment analysis in Python script~~
 * ~~Implement rolling average sentiment by team in RShiny~~
 * ~~Implement bar plots showing fanbase sentiment in RShiny~~
