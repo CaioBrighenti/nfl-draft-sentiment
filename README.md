@@ -14,7 +14,7 @@ The RShiny component of this project relies on the ```reactiveFileReader()``` fu
 
 The plots described above are always visible for all teams, but two gauge plots are also included focusing on the last and next team to pick, in order to more easily gauge reactions to picks. After each pick, these team who last picked is swapped out to include the next team up. These gauge plots are a "boo-meter," representing the current estimate of the fanbase sentiment. An example of what the application looks like can be seen below.
 
-![screenshot](https://raw.githubusercontent.com/CaioBrighenti/nfl-draft-sentiment/master/EV01ANtWAAA0J8A.jpg)
+![screenshot](https://raw.githubusercontent.com/CaioBrighenti/nfl-draft-sentiment/master/EVBQDbgWoAA5T8y3.PNG)
 
 ### Data Cleanup
 
