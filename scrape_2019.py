@@ -4,6 +4,7 @@ import json
 import re
 import time
 import csv
+from tqdm import tqdm
 
 PUSHSHIFT_REDDIT_URL = "http://api.pushshift.io/reddit"
 
@@ -50,10 +51,6 @@ def extract_reddit_data(**kwargs):
     max_created_utc = start_utc
     max_id = 0
 
-    # Open a file and initiate csv writer
-    file = open("C:/Users/Caio Laptop/Documents/Repositories/nfl-draft-sentiment/2019_submissions.csv","a")
-    file_writer = csv.writer(file, delimiter=',')
-
     # While loop for recursive function
     while 1:
         nothing_processed = True
@@ -70,7 +67,10 @@ def extract_reddit_data(**kwargs):
                 if created_utc > max_created_utc: max_created_utc = created_utc
                 # Write row to csv writer
                 print([created_utc, subreddit, object['id']])
-                file_writer.writerow([created_utc, subreddit, object['id']])
+                post_info = [str(created_utc), str(subreddit), str(object['id'])]
+                with open("D:/repositories/nfl-draft-sentiment/2019_submissions.csv","a") as f:
+                    f.write(",".join(post_info))
+                    f.write("\n")
         
         # Exit if nothing happened
         if nothing_processed: return
@@ -79,9 +79,9 @@ def extract_reddit_data(**kwargs):
         # Sleep a little before the next recursive function call
         time.sleep(.5)
 
-file = open("C:/Users/Caio Laptop/Documents/Repositories/nfl-draft-sentiment/2019_submissions.csv","a")
-file_writer = csv.writer(file, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-file_writer.writerow(["timestamp","subreddit","id"])
+with open("D:/repositories/nfl-draft-sentiment/2019_submissions.csv","w+") as f:
+    f.write(",".join(["timestamp","subreddit","id"]))
+    f.write("\n")
 
 # loop through subreddits
 subreddit_list = ["KansasCityChiefs","raiders","DenverBroncos","Chargers","Colts","Tennesseetitans","Texans","Jaguars","bengals","steelers",
@@ -89,3 +89,63 @@ subreddit_list = ["KansasCityChiefs","raiders","DenverBroncos","Chargers","Colts
 "detroitlions","minnesotavikings","falcons","Saints","panthers","buccaneers","AZCardinals","49ers","LosAngelesRams","Seahawks","nfl"]
 for subreddit in subreddit_list:
     extract_reddit_data(subreddit=subreddit,type="submission", start_utc=1556236800,end_utc=1556258400) # draft night
+
+print("DONE SCRAPING POSTS, STARTING COMMENTS")
+
+## INIT REDDIT INSTANCE
+reddit = praw.Reddit()
+
+# initialize csv of comments
+with open("D:/repositories/nfl-draft-sentiment/data/2019_comments.csv","w+") as f:
+    f.write("\t".join(["timestamp","subreddit","id","flair"]))
+    f.write("\n")
+
+# load in submissions
+with open("D:/repositories/nfl-draft-sentiment/2019_submissions.csv","r") as f:
+    # loop through submissions
+    for line in tqdm(f):
+        line = line.strip('\n')
+        line_list = line.split(",")
+        
+        # grab components
+        line_ts = line_list[0]
+        line_subreddit = line_list[1]
+        line_id = line_list[2]
+
+        # grab submission from Reddit intsance
+        try:
+            submission = reddit.submission(id=line_id)
+        except:
+            print("ERROR: MISSING SUBMISSION AT ID " + line_id)
+            continue
+
+        # option to see all comments, continue if none
+        try:
+            submission.comments.replace_more(limit=None)
+        except:
+            print("ERROR: NO COMMENTS IN THIS SUBMISSION")
+            continue
+        
+        # iterate through comments
+        for comment in submission.comments.list():
+            # clean up text
+            comment_text = comment.body.replace("\n", "")
+            comment_text = comment_text.replace("\t", "")
+            comment_text = re.sub(r"[^a-zA-Z0-9 !?,.()]+", '', comment_text)
+            comment_time = comment.created_utc
+
+            # grab flair if needed
+            if line_subreddit == "nfl":
+                comment_flair = comment.author_flair_text
+            else:
+                comment_flair = "NA"
+
+            # write to file
+            #print([comment_time,line_subreddit,comment_flair,comment_text])
+            with open("D:/repositories/nfl-draft-sentiment/data/2019_comments.csv","a") as f:
+                try:
+                    f.write("\t".join([str(comment_time),line_subreddit,comment_flair,comment_text]))
+                    f.write("\n")
+                except:
+                    print("ERROR: NONETYPE IN COMMENT INFO")
+                    print([comment_time,line_subreddit,comment_flair,comment_text])
