@@ -25,6 +25,10 @@ nfl_teams$logo_grob <- nfl_grobs
 
 # SETUP GAUGE PLOT FUNCTION
 gg.gauge <- function(pos, breaks = c(0, 33, 66, 100), determinent, team_name) {
+    # get time
+    t <- Sys.time()
+    t_string <- strftime(t,"%I:%M %p")
+    
     get.poly <- function(a, b, r1 = 0.5, r2 = 1.0) {
         th.start <- pi * (1 - a / 100)
         th.end   <- pi * (1 - b / 100)
@@ -36,14 +40,15 @@ gg.gauge <- function(pos, breaks = c(0, 33, 66, 100), determinent, team_name) {
         data.frame(x, y, xend, yend)
     }
     
+    # colors from https://flatuicolors.com/palette/defo
     ggplot() + 
         geom_segment(data = get.poly(breaks[1],breaks[4]), 
                      aes(x = x, y = y, xend = xend, yend = yend, color = xend),size=2) +
-        scale_color_gradientn(colors = c("#821624", "white", "#16823f")) +
+        scale_color_gradientn(colors = c("#c0392b", "#f39c12", "#27ae60")) +
         geom_segment(data = get.poly(pos - 1, pos + 1, 0.1), aes(x = x, y  =y, xend = xend, yend = yend)) +
-        geom_text(data=as.data.frame(breaks), size = 5, fontface = "bold", vjust = 0,
-                  aes(x = 0.8 * cos(pi * (1 - breaks / 100)),  y = -0.1), label = c('BOO', '', '', "CHEER")) +
-        annotate("text", x  = 0, y = 0,label=determinent,vjust=0,size=8,fontface="bold")+
+        geom_text(data=as.data.frame(breaks), size = 5, vjust = 0,
+                  aes(x = 0.8 * cos(pi * (1 - breaks / 100)),  y = -0.1), label = c('BOO', '', '', "CHEER"), fontface="bold") +
+        annotate("text", x  = 0, y = 0,label=determinent,vjust=0,size=8,  fontface="bold")+
         coord_fixed()+
         theme_bw()+
         theme(axis.text=element_blank(),
@@ -51,10 +56,13 @@ gg.gauge <- function(pos, breaks = c(0, 33, 66, 100), determinent, team_name) {
               axis.ticks=element_blank(),
               panel.grid=element_blank(),
               panel.border=element_blank(),
-              legend.position = "none")+
+              legend.position = "none",
+              text = element_text(family="Roboto"),
+              plot.caption = element_text(hjust=0.5, size=rel(1.2)))+
         labs(
-            title = paste("Average comment sentiment \n for", team_name,"fans")
-        )
+            title = "",
+            caption=paste("Mean sentiment for", team_name, "fans at", t_string,"\n (prior 2 mins)")
+        ) 
 }
 
 
@@ -65,15 +73,18 @@ ui <- fluidPage(
     
     # avoid greying out plot while recalculating
     tags$style(type="text/css",
-               ".recalculating {opacity: 1.0;}"
+               ".recalculating {opacity: 1.0;};
+               .row {font-family: 'Roboto';}
+               .container-fluid {font-family: 'Roboto';}"
     ),
     
-    titlePanel("NFL Draft sentiment tracker - @CaioBrighenti"),
+    headerPanel("NFL Draft Boo Meter"),
     
     sidebarLayout(
         
         # Sidebar with a slider input
         sidebarPanel(width = 3,
+                     style = "text-overflow: clip;",
                      htmlOutput("recentComments")
         ),
         
@@ -201,6 +212,11 @@ server <- function(input, output, session) {
     ######################################
     output$maPlot <- renderPlot({
         req(obj$plot_table)
+        
+        # get time
+        t <- Sys.time()
+        t_string <- strftime(t,"%I:%M %p")
+        
         # plot
         p <- ggplot(obj$plot_table,aes(x=time,y=sentiment,group=team)) +
             geom_line(aes(color=primary),size=1) +
@@ -214,10 +230,10 @@ server <- function(input, output, session) {
             #scale_y_continuous(limits = 0,4, breaks = seq(0,4)) +
             facet_wrap(~division, nrow = 2) +
             labs(
-                title = "Rolling average of /r/NFL comment sentiment by fanbase",
-                caption = "@CaioBrighenti2",
+                title = "Rolling average of Reddit comment sentiment by fanbase",
+                caption = "",
                 y = "mean sentiment (prior 2 mins)",
-                x = "minutes since"
+                x = paste("minutes before", t_string)
             ) +
             theme(
                 legend.position = "none",
@@ -253,15 +269,16 @@ server <- function(input, output, session) {
             scale_y_discrete(expand = c(0,1)) + 
             theme_minimal() +
             labs(
-                title = "Average comment sentiment",
-                subtitle = "Pior 2 mins",
-                caption = "@CaioBrighenti2",
+                title = "Mean comment sentiment (prior 2 mins)",
+                subtitle = "",
+                caption = "",
                 x = "mean sentiment",
                 y = ""
             ) +
             theme(
                 legend.position = "none",
-                text = element_text(family="Roboto")
+                text = element_text(family="Roboto"),
+                panel.grid.major.y = element_blank()
             )
         
         print(p)
@@ -291,13 +308,14 @@ server <- function(input, output, session) {
             geom_vline(xintercept = mean(comment_data$n), linetype="longdash", alpha=0.5) +
             theme_minimal() +
             labs(
-                title = "Number of comments in prior 2 mins",
+                title = "Number of comments (prior 2 mins)",
                 x = "number of comments",
                 y = ""
             ) +
             theme(
                 legend.position = "none",
-                text = element_text(family="Roboto")
+                text = element_text(family="Roboto"),
+                panel.grid.major.y = element_blank()
             )
         
         print(p)
@@ -308,7 +326,7 @@ server <- function(input, output, session) {
     ######################################
     # credit to stack overflow: https://stackoverflow.com/questions/50042214/fill-a-polygon-with-gradient-scale-in-r
     output$gaugePlot <- renderPlot({
-        # temporary
+        # get team
         curr_team <- filter(obj$dat_picks, pick == obj$curr_pick)$team
         
         # get data
@@ -373,14 +391,18 @@ server <- function(input, output, session) {
     ####### STREAM IN NEW COMMENTS #######
     ######################################
     output$recentComments <- renderText({
+        # get time
+        t <- Sys.time()
+        t_string <- strftime(t,"%I:%M %p")
+        
         dat <- as_tibble(fileReaderData()) %>% 
             left_join(lee_logos) %>%
             tail(14) %>%
-            mutate(time = as.character(as_datetime(timestamp-14400))) %>%
-            separate(time, into = c("ymd","hms"), sep=" ") %>%
+            mutate(time = as_datetime(timestamp),
+                   time = strftime(time,"%I:%M %p")) %>%
             mutate(img_html = paste("<img src='",team_logo,"' width='20'>",sep=""),
                    body = str_trunc(body, 140, side="right"),
-                   text = paste(substr(as_hms(hms),1,5), img_html, body)) %>%
+                   text = paste(time, img_html, body)) %>%
             arrange(-timestamp)
         HTML(paste("<h4><b>Recent Comments</b></h4><hr>\n",paste(dat$text, "<br/> <br/>", collapse="")))
     })
@@ -470,8 +492,10 @@ server <- function(input, output, session) {
         # setup image strings
         dat <- obj$dat_picks %>%
             left_join(lee_logos) %>%
-            mutate(pick_html = paste("<h5><b>Pick ", pick, ":</b> ", team, " <img src='",team_logo,"' width='20'> </br></h5>",sep=""))
-        HTML(paste("<h4><i>Draft Order</i></h4>",paste(dat$pick_html, collapse="")))
+            mutate(pick_html = if_else(pick >= obj$curr_pick,
+                paste("<h5><b>Pick ", pick, ":</b> ", team, " <img src='",team_logo,"' width='20'> </br></h5>",sep=""),
+                paste("<del><h5><b>Pick ", pick, ":</b> ", team, " <img src='",team_logo,"' width='20'> </br></h5></del>",sep="")))
+        HTML(paste("<h4><i>Draft Order</i></h4>",paste(dat$pick_html, collapse=""),"</br><h6>Built by @CaioBrighenti </br> Data from PRAW</h6>"))
     })
     
     observeEvent(input$pickrefresh,{
