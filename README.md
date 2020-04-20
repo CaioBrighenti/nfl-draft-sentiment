@@ -26,21 +26,22 @@ During the draft on April 23rd-25th, I will be livestreaming the application at 
 
 ## To-Do
 
-* ~~Remove commments from users with bandwagon flairs or NFC/AFC/NFL/None flairs
+* ~~Remove commments from users with bandwagon flairs or NFC/AFC/NFL/None flairs~~
 * ~~Implement sentiment analysis in Python script~~
 * ~~Implement rolling average sentiment by team in RShiny~~
 * ~~Implement bar plots showing fanbase sentiment in RShiny~~
 * Test application on large-scale dataset
 * Implement data cleanup to avoid indefinite accumulation
-* ~~Add sidebar with last 15 comments
-* ~~Add boo/cheer gauge plot for team currently picking
-* ~~Implement system to keep track of and update draft order
+* ~~Add sidebar with last 15 comments~~
+* ~~Add boo/cheer gauge plot for team currently picking~~
+* ~~Implement system to keep track of and update draft order~~
 
 ## Built With
 
 * [RShiny](https://shiny.rstudio.com/)
 * [PRAW](https://praw.readthedocs.io/en/latest/)
 * [CoreNLP](https://stanfordnlp.github.io/CoreNLP/)
+* [VADER](https://github.com/cjhutto/vaderSentiment)
 
 ## Authors
 
