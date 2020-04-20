@@ -31,7 +31,7 @@ During the draft on April 23rd-25th, I will be livestreaming the application at 
 * ~~Implement rolling average sentiment by team in RShiny~~
 * ~~Implement bar plots showing fanbase sentiment in RShiny~~
 * Test application on large-scale dataset
-* Implement data cleanup to avoid indefinite accumulation
+* ~~Implement data cleanup to avoid indefinite accumulation~~
 * ~~Add sidebar with last 15 comments~~
 * ~~Add boo/cheer gauge plot for team currently picking~~
 * ~~Implement system to keep track of and update draft order~~
@@ -52,3 +52,4 @@ During the draft on April 23rd-25th, I will be livestreaming the application at 
 * [PFF_Moo](https://twitter.com/PFF_Moo) - For helping me with RShiny layout issues and getting team logos working
 * [Lee Sharpe](https://twitter.com/LeeSharpeNFL) - For providing team logos used
 * [StackOverflow](https://stackoverflow.com/questions/50042214/fill-a-polygon-with-gradient-scale-in-r) - Gauge plot code 100% lifted from this thread
+* [ArbitaryAnalytics](https://twitter.com/arbitanalytics) - For the idea to have a Goodell boo-meter
