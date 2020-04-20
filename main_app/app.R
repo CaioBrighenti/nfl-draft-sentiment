@@ -9,6 +9,7 @@ library(ggpmisc)
 library(extrafont)
 library(lubridate)
 library(hms)
+library(shinythemes)
 loadfonts(device = "win", quiet = TRUE)
 
 ### GLOBAL VARIABLES
@@ -16,6 +17,7 @@ lee_logos <- read.csv("D:/repositories/nfl-draft-sentiment/lee_logos.csv")
 nfl_teams <- teamcolors %>% filter(league == "nfl") %>% dplyr::select(mascot,division,primary) %>% rename(team = mascot) %>%
     left_join(lee_logos) %>% mutate(team_logo = as.character(team_logo))
 logo_grobs <- image_read(nfl_teams$team_logo)
+
 ###### CREATE GROB FOR EACH LOGO
 nfl_grobs <- list()
 for (i in 1:nrow(nfl_teams)) {
@@ -40,6 +42,12 @@ gg.gauge <- function(pos, breaks = c(0, 33, 66, 100), determinent, team_name) {
         data.frame(x, y, xend, yend)
     }
     
+    if (team_name == "goodell"){
+        cap <- paste("")
+    } else {
+        cap <- paste("Net sentiment for", team_name, "fans at", t_string,"\n (prior 30 seconds)")
+    }
+    
     # colors from https://flatuicolors.com/palette/defo
     ggplot() + 
         geom_segment(data = get.poly(breaks[1],breaks[4]), 
@@ -61,7 +69,7 @@ gg.gauge <- function(pos, breaks = c(0, 33, 66, 100), determinent, team_name) {
               plot.caption = element_text(hjust=0.5, size=rel(1.2)))+
         labs(
             title = "",
-            caption=paste("Mean sentiment for", team_name, "fans at", t_string,"\n (prior 2 mins)")
+            caption= cap
         ) 
 }
 
@@ -131,6 +139,7 @@ server <- function(input, output, session) {
     ## SETUP PICK ORDER
     obj$curr_round <- 1
     obj$curr_pick <- 1
+    obj$dat_picks <- read.csv("D:/repositories/nfl-draft-sentiment/data/draft_order.csv")
     
     observe({
         # redo every 5 seconds
@@ -142,7 +151,7 @@ server <- function(input, output, session) {
             
             # only in window
             comment_data <- comment_data %>%
-                filter(as.numeric(Sys.time()) - timestamp <= 180)
+                filter(as.numeric(Sys.time()) - timestamp <=120)
             
             # get moving average
             var_time <- as.character(5 * obj$n)
@@ -152,7 +161,7 @@ server <- function(input, output, session) {
                 group_by(team) %>%
                 summarise(sentiment = mean(sentiment)))
             ) %>%
-                mutate(sentiment = replace_na(sentiment,2),
+                mutate(sentiment = replace_na(sentiment,0),
                        time = var_time)
             
             # put in tables
@@ -225,8 +234,8 @@ server <- function(input, output, session) {
             geom_grob(data=filter(obj$plot_table,time==0),aes(label = logo_grob, time, sentiment), vp.height=.3,vp.width=.3) +
             scale_color_identity() +
             scale_x_continuous(limits = c(-600,100), breaks = seq(-600,0,by=180), labels = c("10m","7m","4m","1m")) +
-            scale_y_continuous(limits = c(0,4)) + 
-            geom_hline(yintercept = 2, linetype="longdash") +
+            scale_y_continuous(limits = c(-1,1)) + 
+            geom_hline(yintercept = 0, linetype="longdash") +
             #scale_y_continuous(limits = 0,4, breaks = seq(0,4)) +
             facet_wrap(~division, nrow = 2) +
             labs(
@@ -250,13 +259,13 @@ server <- function(input, output, session) {
         
         # load in reactive data
         comment_data <- as_tibble(fileReaderData()) %>%
-            filter(as.numeric(Sys.time()) - timestamp <= 180) %>%
+            filter(as.numeric(Sys.time()) - timestamp <=120) %>%
             drop_na() %>%
             filter(team != "") %>%
             group_by(team) %>%
             summarise(sentiment = mean(sentiment), n = n()) %>% 
             right_join(dplyr::select(nfl_teams,team,primary)) %>%
-            mutate(sentiment = replace_na(sentiment,2)) %>%
+            mutate(sentiment = replace_na(sentiment,0)) %>%
             left_join(nfl_teams) %>%
             mutate(team = fct_reorder(team, sentiment)) 
         
@@ -264,8 +273,8 @@ server <- function(input, output, session) {
             geom_col(aes(fill = primary)) +
             geom_grob(aes(label = logo_grob, sentiment, team), vp.height=.1,vp.width=.1) +
             scale_fill_identity() +
-            geom_vline(xintercept = 2, linetype="longdash", alpha=0.5) +
-            scale_x_continuous(limits = c(0,4), breaks = c(0,2,4), labels = c("negative", "neutral", "positive")) +
+            geom_vline(xintercept = 0, linetype="longdash", alpha=0.5) +
+            scale_x_continuous(limits = c(-1,1), breaks = c(-1,0,1), labels = c("negative", "neutral", "positive")) +
             scale_y_discrete(expand = c(0,1)) + 
             theme_minimal() +
             labs(
@@ -291,7 +300,7 @@ server <- function(input, output, session) {
         
         # load in reactive data
         comment_data <- as_tibble(fileReaderData()) %>%
-            filter(as.numeric(Sys.time()) - timestamp <= 180) %>%
+            filter(as.numeric(Sys.time()) - timestamp <=120) %>%
             drop_na() %>%
             filter(team != "") %>%
             group_by(team) %>%
@@ -331,47 +340,81 @@ server <- function(input, output, session) {
         
         # get data
         sent <- as_tibble(fileReaderData()) %>%
-            filter(as.numeric(Sys.time()) - timestamp <= 180) %>%
+            filter(as.numeric(Sys.time()) - timestamp <=120) %>%
             drop_na() %>%
             filter(team == curr_team) %>%
-            summarize(sent = mean(sentiment)) %>%
+            summarize(sent = sum(sentiment)) %>%
             pull(sent)
         
         # avoid div by 0
-        if (is.na(sent)){sent = 2}
+        if (is.na(sent)){sent = 0}
         
         # scale sent to 0-100 scale
-        sent_scale <- (sent / 4) * 100
+        sent_scale <- ((sent + 10) / 20) * 100
+        if (sent_scale > 100){
+            sent_scale = 100
+        } else if (sent_scale < 0) {
+            sent_scale = 0
+        }
         
         
         # plot
-        p <- gg.gauge(pos=sent_scale,determinent = as.character(round(sent,1)), team_name = curr_team)
+        p <- gg.gauge(pos=sent_scale,determinent = "", team_name = curr_team)
         print(p)
     })
     
     output$gaugePlot2 <- renderPlot({
-        req(obj$curr_pick > 1)
-        # temporary
-        prev_team <- filter(obj$dat_picks, pick == obj$curr_pick-1)$team
-        
-        # get data
-        sent <- as_tibble(fileReaderData()) %>%
-            filter(as.numeric(Sys.time()) - timestamp <= 180) %>%
-            drop_na() %>%
-            filter(team == prev_team) %>%
-            summarize(sent = mean(sentiment)) %>%
-            pull(sent)
-        
-        # avoid div by 0
-        if (is.na(sent)){sent = 2}
-        
-        # scale sent to 0-100 scale
-        sent_scale <- (sent / 4) * 100
-        
-        
-        # plot
-        p <- gg.gauge(pos=sent_scale,determinent = as.character(round(sent,1)), team_name = prev_team)
-        print(p)
+        if(obj$curr_pick == 1){
+            sent <- as_tibble(fileReaderData()) %>%
+                filter(as.numeric(Sys.time()) - timestamp <=30) %>%
+                drop_na() %>%
+                summarize(sent = sum(sentiment)) %>%
+                pull(sent)
+            
+            # avoid div by 0
+            if (is.na(sent)){sent = 0}
+            
+            # scale sent to 0-100 scale
+            sent_scale <- ((sent + 10) / 20) * 100
+            if (sent_scale > 100){
+                sent_scale = 100
+            } else if (sent_scale < 0) {
+                sent_scale = 0
+            }
+            
+            
+            # plot
+            p <- gg.gauge(pos=sent_scale,determinent = round(sent,1), team_name = "goodell")
+            print(p)
+            
+        } else{
+            # temporary
+            prev_team <- filter(obj$dat_picks, pick == obj$curr_pick-1)$team
+            
+            # get data
+            sent <- as_tibble(fileReaderData()) %>%
+                filter(as.numeric(Sys.time()) - timestamp <=30) %>%
+                drop_na() %>%
+                filter(team == prev_team) %>%
+                summarize(sent = sum(sentiment)) %>%
+                pull(sent)
+            
+            # avoid div by 0
+            if (is.na(sent)){sent = 0}
+            
+            # scale sent to 0-100 scale
+            sent_scale <- ((sent + 10) / 20) * 100
+            if (sent_scale > 100){
+                sent_scale = 100
+            } else if (sent_scale < 0) {
+                sent_scale = 0
+            }
+            
+            
+            # plot
+            p <- gg.gauge(pos=sent_scale,determinent = sent, team_name = prev_team)
+            print(p)
+        }
     })
     
         
@@ -452,36 +495,39 @@ server <- function(input, output, session) {
     
     output$gaugeInfo2 <- renderText({
         # wait till at least pick #2
-        req(obj$curr_pick > 1)
-        
-        # get team
-        prev_team <- filter(obj$dat_picks, pick == obj$curr_pick-1)$team
-        prev_team_name <- filter(teamcolors, league == "nfl", mascot == prev_team) %>% pull(name)
-        
-        # get pick number
-        pick_round <- obj$curr_round
-        pick_number <- obj$curr_pick - 1
-        
-        # get time
-        t<-format(Sys.time())
-        t_str <- strsplit(t, " ")[[1]][2] %>% substr(1,5)
-        t_html <- paste("<center><h1>",t_str,"</h1></center>")
-        
-        # get team logo
-        prev_team_logo <- filter(nfl_teams, team == prev_team) %>% pull(team_logo)
-        prev_img_html = paste("<img src='",prev_team_logo,"' width='20'>",sep="")
-        
-        # get player selected
-        player <- filter(obj$dat_picks, pick == obj$curr_pick-1)$player
-        
-        # setup header
-        team2_header <- paste("<i>Previous pick</i> <h3>Round ", pick_round, 
-                              ", Pick ", pick_number, "</h3> \n <h4>",
-                              prev_team_name, " ", prev_img_html, "</h4>",
-                              "</br> <h4>Selected: </h4> <b>", player, "</b>",
-                              sep="")
-        
-        HTML(team2_header)
+        if (obj$curr_pick == 1){
+            header <- paste("<h1>Goodell Boo-Meter</h1>","<h4>Net sentiment accross all fans</h4><h6>(over prior 30 seconds)</h6>")
+            HTML(header)
+        } else {
+            # get team
+            prev_team <- filter(obj$dat_picks, pick == obj$curr_pick-1)$team
+            prev_team_name <- filter(teamcolors, league == "nfl", mascot == prev_team) %>% pull(name)
+            
+            # get pick number
+            pick_round <- obj$curr_round
+            pick_number <- obj$curr_pick - 1
+            
+            # get time
+            t<-format(Sys.time())
+            t_str <- strsplit(t, " ")[[1]][2] %>% substr(1,5)
+            t_html <- paste("<center><h1>",t_str,"</h1></center>")
+            
+            # get team logo
+            prev_team_logo <- filter(nfl_teams, team == prev_team) %>% pull(team_logo)
+            prev_img_html = paste("<img src='",prev_team_logo,"' width='20'>",sep="")
+            
+            # get player selected
+            player <- filter(obj$dat_picks, pick == obj$curr_pick-1)$player
+            
+            # setup header
+            team2_header <- paste("<i>Previous pick</i> <h3>Round ", pick_round, 
+                                  ", Pick ", pick_number, "</h3> \n <h4>",
+                                  prev_team_name, " ", prev_img_html, "</h4>",
+                                  "</br> <h4>Selected: </h4> <b>", player, "</b>",
+                                  sep="")
+            
+            HTML(team2_header)
+        }
     })
     
     
