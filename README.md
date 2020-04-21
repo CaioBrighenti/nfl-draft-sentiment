@@ -14,7 +14,7 @@ The RShiny component of this project relies on the ```reactiveFileReader()``` fu
 
 The plots described above are always visible for all teams, but two gauge plots are also included focusing on the last and next team to pick, in order to more easily gauge reactions to picks. After each pick, these team who last picked is swapped out to include the next team up. These gauge plots are a "boo-meter," representing the current estimate of the fanbase sentiment. An example of what the application looks like can be seen below.
 
-![screenshot](https://github.com/CaioBrighenti/nfl-draft-sentiment/blob/master/images/EVBQDbgWoAA5T8y3.PNG?raw=true)
+![screenshot](https://github.com/CaioBrighenti/nfl-draft-sentiment/blob/master/images/EVBQDbgWoAA5T8y4.PNG?raw=true)
 
 ### Data Cleanup
 
@@ -26,21 +26,22 @@ During the draft on April 23rd-25th, I will be livestreaming the application at 
 
 ## To-Do
 
-* ~~Remove commments from users with bandwagon flairs or NFC/AFC/NFL/None flairs
+* ~~Remove commments from users with bandwagon flairs or NFC/AFC/NFL/None flairs~~
 * ~~Implement sentiment analysis in Python script~~
 * ~~Implement rolling average sentiment by team in RShiny~~
 * ~~Implement bar plots showing fanbase sentiment in RShiny~~
 * Test application on large-scale dataset
-* Implement data cleanup to avoid indefinite accumulation
-* ~~Add sidebar with last 15 comments
-* ~~Add boo/cheer gauge plot for team currently picking
-* ~~Implement system to keep track of and update draft order
+* ~~Implement data cleanup to avoid indefinite accumulation~~
+* ~~Add sidebar with last 15 comments~~
+* ~~Add boo/cheer gauge plot for team currently picking~~
+* ~~Implement system to keep track of and update draft order~~
 
 ## Built With
 
 * [RShiny](https://shiny.rstudio.com/)
 * [PRAW](https://praw.readthedocs.io/en/latest/)
 * [CoreNLP](https://stanfordnlp.github.io/CoreNLP/)
+* [VADER](https://github.com/cjhutto/vaderSentiment)
 
 ## Authors
 
@@ -51,3 +52,4 @@ During the draft on April 23rd-25th, I will be livestreaming the application at 
 * [PFF_Moo](https://twitter.com/PFF_Moo) - For helping me with RShiny layout issues and getting team logos working
 * [Lee Sharpe](https://twitter.com/LeeSharpeNFL) - For providing team logos used
 * [StackOverflow](https://stackoverflow.com/questions/50042214/fill-a-polygon-with-gradient-scale-in-r) - Gauge plot code 100% lifted from this thread
+* [ArbitaryAnalytics](https://twitter.com/arbitanalytics) - For the idea to have a Goodell boo-meter
