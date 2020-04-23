@@ -10,7 +10,7 @@ import rpy2.robjects as robjects
 from rpy2.robjects.packages import importr
 
 ## INIT GLOBAL VARS
-chunk_size = 10000
+chunk_size = 5000
 num_chunks = 0
 
 ## INIT REDDIT INSTANCE
@@ -58,12 +58,12 @@ def getSentiment(text):
         raise Exception("Comment length 0")
 
 
-with open('D:/repositories/nfl-draft-sentiment/data/comments.csv', 'w', newline='') as csvfile:
+with open('D:/repositories/nfl-draft-sentiment/data/comments.csv', 'w+', newline='') as csvfile:
     # initiate csv writer
     comment_writer = csv.writer(csvfile, delimiter='\t',
                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
     # write header
-    comment_writer.writerow(["timestamp", "team", "body", "length", "sentiment", "subreddit"])
+    comment_writer.writerow(["timestamp", "team", "body", "length", "sentiment", "subreddit", "boo", "id", "body_full"])
 
 # setup multireddit
 team_subreddits = ["KansasCityChiefs","raiders","DenverBroncos","Chargers","Colts","Tennesseetitans","Texans","Jaguars","bengals","steelers",
@@ -77,17 +77,35 @@ teams_dict = dict(zip(team_subreddits,team_names))
 while(True):
     # loop through comments
     n = 0
-    for comment in reddit.subreddit("+".join(team_subreddits)+"+nfl").stream.comments():
+    behind_flag = False
+    for comment in reddit.subreddit("+".join(team_subreddits)+"+nfl").stream.comments(skip_existing=True):
+        # grab time and id
+        comment_time = comment.created_utc #time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(comment.created_utc))
+        comment_id = comment.id
+
+        # control for falling behind
+        if time.time() - comment_time > 30 and not behind_flag:
+            print("BEHIND, INITIATING CATCHUP")
+            behind_flag = True
+            continue
+        elif behind_flag:
+            if time.time() - comment_time <= 5:
+                print("CAUGHT UP, RESUMING AS USUAL")
+                behind_flag = False
+            continue
+            
+
         # grab text and remove new lines
         comment_text = comment.body.replace("\n", "")
         comment_text = comment_text.replace("\t", "")
         comment_text = re.sub(r"[^a-zA-Z0-9 !?,.()]+", '', comment_text)
-        comment_time = comment.created_utc #time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(comment.created_utc))
         comment_length = len(comment_text)
 
         # remove elongations from text
         try:
-            comment_text = textclean.replace_word_elongation(comment_text)[0]
+            comment_text_clean = textclean.replace_word_elongation(comment_text.lower())[0]
+            if "bo" in comment_text_clean.split(" ") or comment_text_clean == "bo":  ### GO RAVENS - Disclaimer: @SeanFromSeabeck blackmailed me to put this here
+                comment_text_clean = comment_text_clean.replace("bo","boo")
         except:
             print("ERROR: WORD ELONGATION CLEANER FAILED")
 
@@ -103,24 +121,28 @@ while(True):
         # get sentiment
         try:
             #comment_sent = getSentiment(comment.body)
-            comment_sent = vader.polarity_scores(comment_text)['compound']
-            # identify just boos
+            comment_sent = vader.polarity_scores(comment_text_clean)['compound']
         except:
             print("ERROR: SENTIMENT ANALYSIS FAILED")
 
         # sentiment heuristics
-        if comment_text.lower() in ["let's go", "lets go", "fuck yes", "fuck yeah"]:
+        if comment_text_clean in ["let's go", "lets go", "fuck yes", "fuck yeah"]:
             comment_sent = .7
-        elif comment_text.lower() in ["boo"]:
+        elif comment_text_clean in ["boo"]:
             comment_sent = -1
 
+        # get goodell boo-meter
+        if "boo" in comment_text_clean.split(" ") or comment_text_clean == "boo":
+            comment_boo = 1
+        else:
+            comment_boo = 0
 
         # visualize and write
         print([comment_time, comment_team, comment_text, comment_length, comment_sent, comment_subr])
 
         # filter out profanity
         try:
-            comment_text = pf.censor(comment_text)
+            comment_text_censored = pf.censor(comment_text)
         except:
             print("UNSUPPORTED CHARACTER IN PROFANITY CENSOR")
             continue
@@ -136,7 +158,7 @@ while(True):
                 comment_writer = csv.writer(csvfile, delimiter='\t',
                                         quotechar='|', quoting=csv.QUOTE_MINIMAL)
                 # write header
-                comment_writer.writerow(["timestamp", "team", "body", "length", "sentiment", "subreddit"])
+                comment_writer.writerow(["timestamp", "team", "body", "length", "sentiment", "subreddit", "boo", "id", "body_full"])
         
         ## write to temp file
         if n == -1:
@@ -144,7 +166,7 @@ while(True):
                 with open('D:/repositories/nfl-draft-sentiment/data/comments_temp.csv', 'a', newline='') as csvfile:
                     # initiate csv writer
                     comment_writer = csv.writer(csvfile, delimiter='\t', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-                    comment_writer.writerow([comment_time, comment_team, comment_text, comment_length, comment_sent, comment_subr])
+                    comment_writer.writerow([comment_time, comment_team, comment_text_censored, comment_length, comment_sent, comment_subr, comment_boo, comment_id, comment_text])
             except:
                 print("ERROR: CONFLICT IN USING TEMP FILE OR UNSUPPORTED CHARACTER")
 
@@ -153,7 +175,7 @@ while(True):
             with open('D:/repositories/nfl-draft-sentiment/data/comments.csv', 'a', newline='') as csvfile:
                 # initiate csv writer
                 comment_writer = csv.writer(csvfile, delimiter='\t', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-                comment_writer.writerow([comment_time, comment_team, comment_text, comment_length, comment_sent, comment_subr])
+                comment_writer.writerow([comment_time, comment_team, comment_text_censored, comment_length, comment_sent, comment_subr, comment_boo, comment_id, comment_text])
                 if n !=-1 : 
                     n = n + 1
         except:
