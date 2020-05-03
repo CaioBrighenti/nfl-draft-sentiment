@@ -73,6 +73,46 @@ gg.gauge <- function(pos, breaks = c(0, 33, 66, 100), determinent, team_name) {
         ) 
 }
 
+gg.gauge2 <- function(pos, breaks = c(0, 33, 66, 100), determinent, team_name) {
+    # get time
+    t <- Sys.time()
+    t_string <- strftime(t,"%I:%M %p")
+    
+    get.poly <- function(a, b, r1 = 0.5, r2 = 1.0) {
+        th.start <- pi * (1 - a / 100)
+        th.end   <- pi * (1 - b / 100)
+        th       <- seq(th.start, th.end, length = 500)
+        x        <- r1 * cos(th)
+        xend     <- r2 * cos(th)
+        y        <- r1 * sin(th)
+        yend     <- r2 * sin(th)
+        data.frame(x, y, xend, yend)
+    }
+    # colors from https://flatuicolors.com/palette/defo
+    ggplot() + 
+        geom_segment(data = get.poly(breaks[1],breaks[4]), 
+                     aes(x = x, y = y, xend = xend, yend = yend, color = xend),size=2) +
+        scale_color_gradientn(colors = c("#27ae60", "#f39c12", "#c0392b")) +
+        geom_segment(data = get.poly(pos - 1, pos + 1, 0.1), aes(x = x, y  =y, xend = xend, yend = yend)) +
+        geom_text(data=as.data.frame(breaks), size = 5, vjust = 0,
+                  aes(x = 0.8 * cos(pi * (1 - breaks / 100)),  y = -0.1), label = c('', '', '', "BOO"), fontface="bold") +
+        annotate("text", x  = 0, y = 0,label=determinent,vjust=0,size=8,  fontface="bold")+
+        coord_fixed()+
+        theme_bw()+
+        theme(axis.text=element_blank(),
+              axis.title=element_blank(),
+              axis.ticks=element_blank(),
+              panel.grid=element_blank(),
+              panel.border=element_blank(),
+              legend.position = "none",
+              text = element_text(family="Roboto"),
+              plot.caption = element_text(hjust=0.5, size=rel(1.2)))+
+        labs(
+            title = "",
+            caption= paste("Number of boos by all NFL fans at", t_string,"\n (prior 30 seconds)")
+        ) 
+}
+
 
 ### SETUP PICK ORDER
 
@@ -135,6 +175,7 @@ server <- function(input, output, session) {
     obj <- reactiveValues()
     obj$n <- 0
     obj$last_exec <- Sys.time()
+    obj$last_write <- Sys.time()
     
     ## SETUP PICK ORDER
     obj$curr_round <- 1
@@ -147,7 +188,8 @@ server <- function(input, output, session) {
         if (Sys.time() - obj$last_exec >= 5){
             # load in reactive data
             comment_data <- as_tibble(isolate(fileReaderData())) 
-    
+            
+            # refresh draft order
             
             # only in window
             comment_data <- comment_data %>%
@@ -185,6 +227,10 @@ server <- function(input, output, session) {
             obj$plot_table <- filter(obj$ma_table, as.numeric(time) >= (obj$n * 5) - 600) %>% mutate(time = as.numeric(time) - curr_time) %>%
                 left_join(nfl_teams)
             
+            # write to file every 10 minutes
+            if (Sys.time() - obj$last_exec >= 600){
+                write.csv(obj$ma_table,"D:/repositories/nfl-draft-sentiment/data/ma_table.csv", row.names=FALSE)
+            }
         }
         
     })
@@ -359,32 +405,21 @@ server <- function(input, output, session) {
         
         
         # plot
-        p <- gg.gauge(pos=sent_scale,determinent = "", team_name = curr_team)
+        p <- gg.gauge(pos=sent_scale,determinent = round(sent,1), team_name = curr_team)
         print(p)
     })
     
     output$gaugePlot2 <- renderPlot({
         if(obj$curr_pick == 1){
-            sent <- as_tibble(fileReaderData()) %>%
-                filter(as.numeric(Sys.time()) - timestamp <=30) %>%
+            boo <- as_tibble(fileReaderData()) %>%
+                filter(as.numeric(Sys.time()) - timestamp <=30, boo==1) %>%
                 drop_na() %>%
-                summarize(sent = sum(sentiment)) %>%
-                pull(sent)
+                count()
             
-            # avoid div by 0
-            if (is.na(sent)){sent = 0}
-            
-            # scale sent to 0-100 scale
-            sent_scale <- ((sent + 10) / 20) * 100
-            if (sent_scale > 100){
-                sent_scale = 100
-            } else if (sent_scale < 0) {
-                sent_scale = 0
-            }
-            
+            boo <- min(unlist(c(100,boo)))
             
             # plot
-            p <- gg.gauge(pos=sent_scale,determinent = round(sent,1), team_name = "goodell")
+            p <- gg.gauge2(pos=boo,determinent = boo)
             print(p)
             
         } else{
@@ -412,7 +447,7 @@ server <- function(input, output, session) {
             
             
             # plot
-            p <- gg.gauge(pos=sent_scale,determinent = sent, team_name = prev_team)
+            p <- gg.gauge(pos=sent_scale,determinent = round(sent,1), team_name = prev_team)
             print(p)
         }
     })
@@ -496,7 +531,7 @@ server <- function(input, output, session) {
     output$gaugeInfo2 <- renderText({
         # wait till at least pick #2
         if (obj$curr_pick == 1){
-            header <- paste("<h1>Goodell Boo-Meter</h1>","<h4>Net sentiment accross all fans</h4><h6>(over prior 30 seconds)</h6>")
+            header <- paste("<h1>Goodell Boo-Meter</h1>","<h4>Total boos accross all fans</h4><h6>(over prior 30 seconds)</h6>")
             HTML(header)
         } else {
             # get team
